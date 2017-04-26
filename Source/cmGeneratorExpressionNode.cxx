@@ -577,6 +577,36 @@ struct PlatformIdNode : public cmGeneratorExpressionNode
   }
 } platformIdNode;
 
+
+struct ProcessorIdNode : public cmGeneratorExpressionNode
+{
+  ProcessorIdNode() {}
+
+  int NumExpectedParameters() const CM_OVERRIDE { return OneOrMoreParameters; }
+
+  std::string Evaluate(const std::vector<std::string>& parameters,
+                       cmGeneratorExpressionContext* context,
+                       const GeneratorExpressionContent* /*content*/,
+                       cmGeneratorExpressionDAGChecker* /*dagChecker*/) const
+    CM_OVERRIDE
+  {
+    const char* processorId =
+      context->LG->GetMakefile()->GetSafeDefinition("CMAKE_SYSTEM_PROCESSOR");
+    if (parameters.empty()) {
+      return processorId ? processorId : "";
+    }
+
+    if (!processorId) {
+      return parameters.front().empty() ? "1" : "0";
+    }
+
+    if (strcmp(parameters.begin()->c_str(), processorId) == 0) {
+      return "1";
+    }
+    return "0";
+  }
+} processorIdNode;
+
 static const struct VersionGreaterNode : public cmGeneratorExpressionNode
 {
   VersionGreaterNode() {}
@@ -1868,6 +1898,7 @@ const cmGeneratorExpressionNode* cmGeneratorExpressionNode::GetNode(
     nodeMap["LINK_ONLY"] = &linkOnlyNode;
     nodeMap["COMPILE_LANGUAGE"] = &languageNode;
     nodeMap["SHELL_PATH"] = &shellPathNode;
+    nodeMap["SYSTEM_PROCESSOR"] = &processorIdNode;
   }
   NodeMap::const_iterator i = nodeMap.find(identifier);
   if (i == nodeMap.end()) {
