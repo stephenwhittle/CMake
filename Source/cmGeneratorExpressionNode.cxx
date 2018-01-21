@@ -275,6 +275,38 @@ static const struct EqualNode : public cmGeneratorExpressionNode
   }
 } equalNode;
 
+//takes in list and value to look for
+static const struct ListContainsNode : public cmGeneratorExpressionNode
+{
+  ListContainsNode() {}
+
+  int NumExpectedParameters() const override { return 2; }
+
+
+std::string Evaluate(
+    const std::vector<std::string>& parameters,
+    cmGeneratorExpressionContext* /*context*/,
+    const GeneratorExpressionContent* /*content*/,
+    cmGeneratorExpressionDAGChecker* /*dagChecker*/) const override
+  {
+    
+    std::vector<std::string> list;
+    //expand the first parameter to list and discard empty entries
+    cmSystemTools::ExpandListArgument(*parameters.begin(), list, false); 
+
+    for (std::string listEntry : list){
+      if (listEntry == parameters[1]) {
+        return "1";
+      }
+    }
+    return "0";
+  }
+} listContainsNode;
+
+
+
+
+
 static const struct LowerCaseNode : public cmGeneratorExpressionNode
 {
   LowerCaseNode() {}
@@ -1846,6 +1878,7 @@ const cmGeneratorExpressionNode* cmGeneratorExpressionNode::GetNode(
     nodeMap["LINK_ONLY"] = &linkOnlyNode;
     nodeMap["COMPILE_LANGUAGE"] = &languageNode;
     nodeMap["SHELL_PATH"] = &shellPathNode;
+    nodeMap["LIST_CONTAINS"] = &listContainsNode;
   }
   NodeMap::const_iterator i = nodeMap.find(identifier);
   if (i == nodeMap.end()) {
