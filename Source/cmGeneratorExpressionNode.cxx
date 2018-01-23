@@ -15,7 +15,9 @@
 #include "cmOutputConverter.h"
 #include "cmPolicies.h"
 #include "cmStateTypes.h"
+#include "cmState.h"
 #include "cmSystemTools.h"
+#include "cmExecutionStatus.h"
 #include "cmTarget.h"
 #include "cmake.h"
 
@@ -299,6 +301,43 @@ static const struct InListNode : public cmGeneratorExpressionNode
       : "1";
   }
 } inListNode;
+static const struct CallFuncNode : public cmGeneratorExpressionNode
+{
+
+  CallFuncNode() {}
+
+  int NumExpectedParameters() const override { return OneOrMoreParameters; }
+
+
+  std::string Evaluate(
+    const std::vector<std::string>& parameters,
+    cmGeneratorExpressionContext* context,
+    const GeneratorExpressionContent* /*content*/,
+    cmGeneratorExpressionDAGChecker* /*dagChecker*/) const override
+  {
+	 auto Command = context->LG->GetMakefile()->GetState()->GetCommand(*parameters.begin());
+    //create a new lff and put the name and args into it
+
+	cmListFileFunction newLFF;
+	newLFF.Name = *parameters.begin();
+	for (auto param = std::next(parameters.begin()); param != parameters.end(); ++param)
+	{
+		cmListFileArgument arg;
+		arg.Value = *param;
+		newLFF.Arguments.push_back(arg);
+	}
+	//then call makefile->run command
+	cmExecutionStatus execStatus;
+	context->LG->GetMakefile()->ExecuteCommand(newLFF, execStatus);
+	
+	auto returnValueVarName = cmsys::SystemTools::AppendStrings((*parameters.begin()).c_str(), "_retval");
+
+	auto retval = context->LG->GetMakefile()->GetDefinition(returnValueVarName);
+	delete[] returnValueVarName;
+	return retval;
+  }
+
+} callFuncNode;
 
 static const struct TargetExistsNode : public cmGeneratorExpressionNode
 {
@@ -2045,6 +2084,7 @@ const cmGeneratorExpressionNode* cmGeneratorExpressionNode::GetNode(
     nodeMap["LINK_ONLY"] = &linkOnlyNode;
     nodeMap["COMPILE_LANGUAGE"] = &languageNode;
     nodeMap["SHELL_PATH"] = &shellPathNode;
+  	nodeMap["FUNC_RESULT"] = &callFuncNode;
   }
   NodeMap::const_iterator i = nodeMap.find(identifier);
   if (i == nodeMap.end()) {
