@@ -315,9 +315,7 @@ static const struct CallFuncNode : public cmGeneratorExpressionNode
     const GeneratorExpressionContent* /*content*/,
     cmGeneratorExpressionDAGChecker* /*dagChecker*/) const override
   {
-	 auto Command = context->LG->GetMakefile()->GetState()->GetCommand(*parameters.begin());
     //create a new lff and put the name and args into it
-
 	cmListFileFunction newLFF;
 	newLFF.Name = *parameters.begin();
 	for (auto param = std::next(parameters.begin()); param != parameters.end(); ++param)
@@ -333,8 +331,10 @@ static const struct CallFuncNode : public cmGeneratorExpressionNode
 	auto returnValueVarName = cmsys::SystemTools::AppendStrings((*parameters.begin()).c_str(), "_retval");
 
 	auto retval = context->LG->GetMakefile()->GetDefinition(returnValueVarName);
+	context->LG->GetMakefile()->RemoveDefinition(returnValueVarName);
 	delete[] returnValueVarName;
-	return retval;
+  
+	return (retval != nullptr? retval : "0");
   }
 
 } callFuncNode;
