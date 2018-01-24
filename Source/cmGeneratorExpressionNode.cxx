@@ -324,17 +324,36 @@ static const struct CallFuncNode : public cmGeneratorExpressionNode
 		arg.Value = *param;
 		newLFF.Arguments.push_back(arg);
 	}
+	
+	auto returnValueVarName = cmsys::SystemTools::AppendStrings((*parameters.begin()).c_str(), "_retval");
+	auto OldRetValValue = context->LG->GetMakefile()->GetDefinition(returnValueVarName);
+
 	//then call makefile->run command
 	cmExecutionStatus execStatus;
 	context->LG->GetMakefile()->ExecuteCommand(newLFF, execStatus);
 	
-	auto returnValueVarName = cmsys::SystemTools::AppendStrings((*parameters.begin()).c_str(), "_retval");
-
 	auto retval = context->LG->GetMakefile()->GetDefinition(returnValueVarName);
-	context->LG->GetMakefile()->RemoveDefinition(returnValueVarName);
+	
+	std::string ReturnValue;
+	bool RetrievedReturnValue = false;
+	if (retval)
+	{
+		RetrievedReturnValue = true;
+		ReturnValue = retval;
+	}
+	
+
+	if (OldRetValValue)
+	{
+		context->LG->GetMakefile()->RemoveDefinition(OldRetValValue);
+	}
+	else
+	{
+		context->LG->GetMakefile()->RemoveDefinition(returnValueVarName);
+	}
 	delete[] returnValueVarName;
   
-	return (retval != nullptr? retval : "0");
+	return (RetrievedReturnValue ? ReturnValue: std::string());
   }
 
 } callFuncNode;
